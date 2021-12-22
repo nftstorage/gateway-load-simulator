@@ -1,0 +1,27 @@
+{
+  "name": "gateway-load-simulator",
+  "version": "1.0.0",
+  "description": "Load simulator for a gateway endpoint",
+  "main": "src/index.js",
+  "type": "module",
+  "bin": {
+    "gw-load": "bin.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Vasco Santos",
+  "license": "(Apache-2.0 AND MIT)",
+  "dependencies": {
+    "@web-std/fetch": "^3.0.0",
+    "csv-writer": "^1.6.0",
+    "delay": "^5.0.0",
+    "dotenv": "^10.0.0",
+    "iterparse": "^0.0.30",
+    "multiformats": "^9.5.4",
+    "p-queue": "^7.1.0",
+    "readable-web-to-node-stream": "^3.0.2",
+    "sade": "^1.7.4",
+    "web3.storage": "^3.5.1"
+  }
+}
