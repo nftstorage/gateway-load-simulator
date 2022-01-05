@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url'
 
 import { loadTestFromWeb3, loadTest } from './src/index.js'
 import { split } from './src/split.js'
+import { transformLog } from './src/transform-log.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const prog = sade('db-migration')
@@ -24,5 +25,8 @@ prog
   .command('split <csvPath> <number>')
   .describe('Split csv file into multiple files and add them to web3.storage')
   .action(split)
+  .command('transform <logPath>')
+  .describe('Transform log file into valid csv file')
+  .action(transformLog)
 
 prog.parse(process.argv)

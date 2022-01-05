@@ -23,7 +23,8 @@ export async function split (csvPath, number) {
       path: `${outputPath}/${i}.csv`,
       header: [
         { id: 'ts', title: 'ts' },
-        { id: 'cid', title: 'cid' }
+        { id: 'cid', title: 'cid' },
+        { id: 'path', title: 'path' }
       ]
     })
   })
@@ -35,7 +36,8 @@ export async function split (csvPath, number) {
 
     writerBuffer[idx].push({
       ts: new Date(data.ts).toISOString(),
-      cid: data.cid
+      cid: data.cid,
+      path: data.path
     })
 
     if (writerBuffer[idx].length >= WRITER_BUFFER_SIZE) {

@@ -5,8 +5,8 @@
 ## CSV format
 
 ```csv
-ts,cid
-"2021-11-15T09:21:37.554123Z","bafkreidyeivj7adnnac6ljvzj2e3rd5xdw3revw4da7mx2ckrstapoupoq"
+ts,cid,path
+"2021-11-15T09:21:37.554123Z","bafkreidyeivj7adnnac6ljvzj2e3rd5xdw3revw4da7mx2ckrstapoupoq",""
 ```
 
 The timestamps will be used as a relative time. This tool requires that the timestamps are sorted by timestamp. It will use the first timestamp as the initial date and perform requests with the same cadence as the CSV file states.
