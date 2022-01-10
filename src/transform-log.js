@@ -36,14 +36,20 @@ export async function transformLog (logPath, { outputPath }) {
     let cid, path = ''
     // Is IPFS Path
     if (line.includes('GET /ipfs/')) {
-      const ipfsPath = line.match(/ipfs\/[a-zA-Z0-9/]*/)[0]
-      cid = ipfsPath.split('/')[1]
-      path = ipfsPath.split(`ipfs/${cid}`)[1] || ''
+      const ipfsPath = line.match(/ipfs\/[a-zA-Z0-9/]*/)
+
+      if (ipfsPath) {
+        cid = ipfsPath[0].split('/')[1]
+        path = ipfsPath[0].split(`ipfs/${cid}`)[1] || ''
+      }
       // console.log(`ipfs path --- cid: ${cid} --- path: ${path}`)
     } else if (line.includes('.ipfs.')) {
-      const subdomainPath = line.match(/[a-zA-Z0-9/]+.ipfs.[a-zA-Z0-9/.]*/)[0]
-      cid = subdomainPath.split('.ipfs.')[0]
-      path = subdomainPath.indexOf('/') >= 0 ? subdomainPath.substring(subdomainPath.indexOf('/')) : ''
+      const subdomainPath = line.match(/[a-zA-Z0-9/]+.ipfs.[a-zA-Z0-9/.]*/)
+
+      if (subdomainPath) {
+        cid = subdomainPath[0].split('.ipfs.')[0]
+        path = subdomainPath[0].indexOf('/') >= 0 ? subdomainPath[0].substring(subdomainPath.indexOf('/')) : ''
+      }
       // console.log(`subdomain path --- cid : ${cid} --- path: ${path}`)
     }
 

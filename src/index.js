@@ -11,6 +11,9 @@ import { CID } from 'multiformats/cid'
  * @param {string} csvPath
  */
 export async function loadTest (csvPath) {
+  const executionTimes = []
+  let timeoutCount = 0
+
   try {
     await fs.promises.stat(csvPath)
   } catch (err) {
@@ -41,11 +44,34 @@ export async function loadTest (csvPath) {
 
     // Add gateway fetch to queue
     const nCid = normalizeCid(data.cid)
-    queue.add(() => fetch(`https://${nCid}.ipfs.${ipfsGateway}`))
+    const path = data.path || ''
+    queue.add(async () => {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 15000)
+      const start = Date.now()
+
+      try {
+        const res = await fetch(`https://${nCid}.ipfs.${ipfsGateway}${path}`, { signal: controller.signal })
+
+        clearTimeout(timer)
+
+        executionTimes.push(Date.now() - start)
+        return res
+      } catch (err) {
+        timeoutCount++
+      }
+    })
   }
 
   // Wait until queue fulfills all requests
   await queue.onEmpty()
+
+  // Report back on response times + timeout
+  const sum = executionTimes.reduce((a, b) => a + b, 0);
+  const avg = (sum / executionTimes.length) || 0
+
+  console.log('Average response time: ', avg)
+  console.log('Count timeouts: ', timeoutCount)
 }
 
 /**
