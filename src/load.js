@@ -86,7 +86,6 @@ export async function loadTestFromWeb3 (cid, fileName) {
   const nCid = normalizeCid(cid)
   const outputPath = `${os.tmpdir()}/${(parseInt(String(Math.random() * 1e9), 10)).toString() + Date.now()}`
   const fileOutputPath = `${outputPath}/${fileName}`
-  console.log('iii', `https://${nCid}.ipfs.${ipfsGateway}/${fileName}`)
   const res = await fetch(`https://${nCid}.ipfs.${ipfsGateway}/${fileName}`)
 
   await fs.promises.mkdir(outputPath)

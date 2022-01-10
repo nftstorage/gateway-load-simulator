@@ -7,6 +7,9 @@
   "bin": {
     "gw-load": "bin.js"
   },
+  "engines": {
+    "node": "16.x"
+  },
   "scripts": {
     "start-with-env": "node src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
