@@ -21,6 +21,10 @@ IPFS_GATEWAY="dweb.link"
 
 # Used for storage
 WEB3_STORAGE_TOKEN="<insert token created from web3.storage>"
+
+### Running Load tests from CID + path (not for development)
+CSV_DIR_CID="<insert cid>"
+CSV_FILE_NAME="<insert file name>"
 ```
 
 ## CLI

@@ -4,7 +4,7 @@ import dotenv from 'dotenv'
 import sade from 'sade'
 import { fileURLToPath } from 'url'
 
-import { loadTestFromWeb3, loadTest } from './src/index.js'
+import { loadTestFromWeb3, loadTest } from './src/load.js'
 import { split } from './src/split.js'
 import { transformLog } from './src/transform-log.js'
 
