@@ -1,11 +1,14 @@
 import fs from 'fs'
 import os from 'os'
 import delay from 'delay'
+import ora from 'ora'
 import { csvRead } from 'iterparse'
 import fetch from '@web-std/fetch'
 import pQueue from 'p-queue'
 import { ReadableWebToNodeStream } from 'readable-web-to-node-stream'
 import { CID } from 'multiformats/cid'
+import { Web3Storage } from 'web3.storage'
+import { File } from '@web-std/file'
 
 /**
  * @param {string} csvPath
@@ -22,7 +25,7 @@ export async function loadTest (csvPath) {
 
   // Create queue for concurrent requests to gateway as needed
   const ipfsGateway = process.env.IPFS_GATEWAY
-  const queue = new pQueue({ concurrency: 3 })
+  const queue = new pQueue({ concurrency: 2 })
 
   queue.on('next', () => {
     console.log(`Task is completed. Size: ${queue.size}, Pending: ${queue.pending}`);
@@ -30,6 +33,7 @@ export async function loadTest (csvPath) {
 
   let initialTs, differenceTs
 
+  const spinnerRead = ora('reading csv and fetching from gateway')
   for await (const { data } of csvRead({ filePath: csvPath })) {
     // Fill in initialTs if not exists
     if (!initialTs) {
@@ -50,18 +54,22 @@ export async function loadTest (csvPath) {
       const timer = setTimeout(() => controller.abort(), 15000)
       const start = Date.now()
 
+      let res
       try {
-        const res = await fetch(`https://${nCid}.ipfs.${ipfsGateway}${path}`, { signal: controller.signal })
-
-        clearTimeout(timer)
-
+        res = await fetch(`https://${nCid}.ipfs.${ipfsGateway}${path}`, { signal: controller.signal })
         executionTimes.push(Date.now() - start)
         return res
       } catch (err) {
         timeoutCount++
+      } finally {
+        clearTimeout(timer)
       }
+
+      return res
     })
   }
+
+  spinnerRead.stopAndPersist()
 
   // Wait until queue fulfills all requests
   await queue.onEmpty()
@@ -72,6 +80,21 @@ export async function loadTest (csvPath) {
 
   console.log('Average response time: ', avg)
   console.log('Count timeouts: ', timeoutCount)
+
+  // Store data to web3.storage
+  const w3Client = new Web3Storage({
+    token: process.env.WEB3_STORAGE_TOKEN
+  })
+  const jsonStr = JSON.stringify({
+    sum,
+    avg,
+    csvPath
+  })
+  const file = new File([jsonStr], `metrics-${csvPath}`, {
+    type: 'text/plain'
+  })
+  const root = await w3Client.put([file])
+  console.log('rootCid', root)
 }
 
 /**

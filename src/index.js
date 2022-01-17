@@ -18,7 +18,11 @@ async function main () {
     throw new Error('Either directory CID or filename were not provided')
   }
 
-  await loadTestFromWeb3(csvDirectoryCid, csvFileName)
+  try {
+    await loadTestFromWeb3(csvDirectoryCid, csvFileName)
+  } catch (err) {
+    console.log('error', err)
+  }
 }
 
 main()

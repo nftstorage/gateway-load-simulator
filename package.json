@@ -18,11 +18,13 @@
   "license": "(Apache-2.0 AND MIT)",
   "dependencies": {
     "@web-std/fetch": "^3.0.0",
+    "@web-std/file": "^3.0.0",
     "csv-writer": "^1.6.0",
     "delay": "^5.0.0",
     "dotenv": "^10.0.0",
     "iterparse": "^0.0.30",
     "multiformats": "^9.5.4",
+    "ora": "^6.0.1",
     "p-queue": "^7.1.0",
     "readable-web-to-node-stream": "^3.0.2",
     "sade": "^1.7.4",
