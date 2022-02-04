@@ -38,8 +38,7 @@ export async function loadTest (csvPath) {
   })
 
   let initialTs, differenceTs, lastTs
-  let wasLimitRated
-  let countReq = 0, countRateLimited = 0
+  let countReq = 0, countFailed = 0
 
   const spinnerRead = ora('reading csv and fetching from gateway')
   for await (const { data } of csvRead({ filePath: csvPath })) {
@@ -53,12 +52,6 @@ export async function loadTest (csvPath) {
     const relativeTs = new Date(data.ts).getTime() + differenceTs
     const now = Date.now() // wait until ready
     relativeTs > now && await delay(relativeTs - now)
-
-    if (wasLimitRated) {
-      console.log('---RATE LIMITED---')
-      countRateLimited++
-      break
-    }
 
     // Add gateway fetch to queue
     const nCid = normalizeCid(data.cid)
@@ -87,26 +80,14 @@ export async function loadTest (csvPath) {
       }
       res && console.log('res', res.ok, res.status)
       if (res && !res.ok) {
-        wasLimitRated = true
+        countFailed++
       }
     })
 
     if (queue.size >= 500) {
       await pWaitFor(() => queue.size < 200)
     }
-
-    if (wasLimitRated) {
-      console.log('---RATE LIMITED---')
-      break
-    }
   }
-
-  const end = Date.now()
-  console.log('start: ', initialTs)
-  console.log('end: ', end)
-  console.log('duration: ', end - initialTs)
-  console.log('requests: ', countReq)
-  console.log('rate limited: ', countReq, countRateLimited)
 
   spinnerRead.stopAndPersist()
 
@@ -117,6 +98,12 @@ export async function loadTest (csvPath) {
   const sum = executionTimes.reduce((a, b) => a + b, 0);
   const avg = (sum / executionTimes.length) || 0
 
+  const end = Date.now()
+  console.log('start: ', initialTs)
+  console.log('end: ', end)
+  console.log('duration: ', end - initialTs)
+  console.log('requests: ', countReq)
+  console.log('failed: ', countFailed)
   console.log('Average response time: ', avg)
   console.log('Count timeouts: ', timeoutCount)
 
@@ -128,7 +115,7 @@ export async function loadTest (csvPath) {
     sum,
     avg,
     countReq,
-    countRateLimited,
+    countFailed,
     csvPath
   })
   const file = new File([jsonStr], `metrics-${csvPath}`, {
