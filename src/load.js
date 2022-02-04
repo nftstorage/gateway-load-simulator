@@ -3,12 +3,13 @@ import os from 'os'
 import delay from 'delay'
 import ora from 'ora'
 import { csvRead } from 'iterparse'
-import fetch from '@web-std/fetch'
+import fetch from 'node-fetch'
 import pQueue from 'p-queue'
-import { ReadableWebToNodeStream } from 'readable-web-to-node-stream'
+import pWaitFor from 'p-wait-for'
 import { CID } from 'multiformats/cid'
 import { Web3Storage } from 'web3.storage'
 import { File } from '@web-std/file'
+import wcL from 'unix-wc-l'
 
 /**
  * @param {string} csvPath
@@ -23,15 +24,22 @@ export async function loadTest (csvPath) {
     throw new Error('no file in given path')
   }
 
+  // Get lines
+  const nLines = await wcL(csvPath)
+  console.log('wc -l', nLines)
+
   // Create queue for concurrent requests to gateway as needed
   const ipfsGateway = process.env.IPFS_GATEWAY
-  const queue = new pQueue({ concurrency: 2 })
+  const concurrency = 2
+  const queue = new pQueue({ concurrency })
 
   queue.on('next', () => {
-    console.log(`Task is completed. Size: ${queue.size}, Pending: ${queue.pending}`);
+    console.log(`Task is completed. Size: ${queue.size}, Pending: ${queue.pending}`)
   })
 
-  let initialTs, differenceTs
+  let initialTs, differenceTs, lastTs
+  let wasLimitRated
+  let countReq = 0, countRateLimited = 0
 
   const spinnerRead = ora('reading csv and fetching from gateway')
   for await (const { data } of csvRead({ filePath: csvPath })) {
@@ -43,31 +51,62 @@ export async function loadTest (csvPath) {
 
     // New timestamp relative to the current time
     const relativeTs = new Date(data.ts).getTime() + differenceTs
-    const now = Date.now()
+    const now = Date.now() // wait until ready
     relativeTs > now && await delay(relativeTs - now)
+
+    if (wasLimitRated) {
+      console.log('---RATE LIMITED---')
+      countRateLimited++
+      break
+    }
 
     // Add gateway fetch to queue
     const nCid = normalizeCid(data.cid)
     const path = data.path || ''
     queue.add(async () => {
+      // Do not make super fast concurrent requests
+      if (lastTs) {
+        const readyToGoTs = lastTs + 50
+        readyToGoTs > Date.now() && await delay(200)
+      }
+      lastTs = Date.now()
+
       const controller = new AbortController()
       const timer = setTimeout(() => controller.abort(), 15000)
       const start = Date.now()
 
       let res
       try {
-        res = await fetch(`https://${nCid}.ipfs.${ipfsGateway}${path}`, { signal: controller.signal })
+        res = await fetch(`https://${nCid}.${ipfsGateway}${path}`, { signal: controller.signal })
         executionTimes.push(Date.now() - start)
-        return res
       } catch (err) {
         timeoutCount++
       } finally {
         clearTimeout(timer)
+        countReq += 1
       }
-
-      return res
+      res && console.log('res', res.ok, res.status)
+      if (res && !res.ok) {
+        wasLimitRated = true
+      }
     })
+
+    if (queue.size >= 500) {
+      await pWaitFor(() => queue.size < 200)
+    }
+
+    if (wasLimitRated) {
+      console.log('---RATE LIMITED---')
+      break
+    }
   }
+
+  const end = Date.now()
+  console.log('start: ', initialTs)
+  console.log('end: ', end)
+  console.log('duration: ', end - initialTs)
+  console.log('requests: ', countReq)
+  console.log('rate limited: ', countReq, countRateLimited)
 
   spinnerRead.stopAndPersist()
 
@@ -88,6 +127,8 @@ export async function loadTest (csvPath) {
   const jsonStr = JSON.stringify({
     sum,
     avg,
+    countReq,
+    countRateLimited,
     csvPath
   })
   const file = new File([jsonStr], `metrics-${csvPath}`, {
@@ -105,19 +146,19 @@ export async function loadTest (csvPath) {
  */
 export async function loadTestFromWeb3 (cid, fileName) {
   // Get file from network
-  const ipfsGateway = process.env.IPFS_GATEWAY
+  const ipfsGateway = process.env.IPFS_GATEWAY_LOAD || process.env.IPFS_GATEWAY
   const nCid = normalizeCid(cid)
   const outputPath = `${os.tmpdir()}/${(parseInt(String(Math.random() * 1e9), 10)).toString() + Date.now()}`
   const fileOutputPath = `${outputPath}/${fileName}`
-  const res = await fetch(`https://${nCid}.ipfs.${ipfsGateway}/${fileName}`)
 
   await fs.promises.mkdir(outputPath)
+  const res = await fetch(`https://${nCid}.ipfs.${ipfsGateway}/${fileName}`)
+  const dest = fs.createWriteStream(fileOutputPath)
+
   await new Promise((resolve, reject) => {
-    const dest = fs.createWriteStream(fileOutputPath)
-    const source = new ReadableWebToNodeStream(res.body)
-    source.pipe(dest)
-    source.on('end', resolve)
-    dest.on('error', reject)
+    res.body.pipe(dest)
+    res.body.on('error', reject)
+    dest.on('finish', resolve)
   })
 
   console.log('CSV file written to ', fileOutputPath)
