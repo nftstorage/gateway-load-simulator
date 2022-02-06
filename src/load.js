@@ -68,6 +68,10 @@ export async function loadTest (csvPath) {
       const timer = setTimeout(() => controller.abort(), 15000)
       const start = Date.now()
 
+      if (!process.env.GATEWAY_FETCH) {
+        return
+      }
+
       let res
       try {
         res = await fetch(`https://${nCid}.${ipfsGateway}${path}`, { signal: controller.signal })
