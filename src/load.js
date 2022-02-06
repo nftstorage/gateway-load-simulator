@@ -82,7 +82,7 @@ export async function loadTest (csvPath) {
         clearTimeout(timer)
         countReq += 1
       }
-      res && console.log('res', res.ok, res.status)
+      res && console.log('res', `https://${nCid}.${ipfsGateway}${path}`, res.ok, res.status)
       if (res && !res.ok) {
         countFailed++
       }
