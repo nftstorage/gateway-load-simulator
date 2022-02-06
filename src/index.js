@@ -21,6 +21,8 @@ async function main () {
     return
   }
 
+  return
+
   if (!csvDirectoryCid || !csvFileName) {
     throw new Error('Either directory CID or filename were not provided')
   }
